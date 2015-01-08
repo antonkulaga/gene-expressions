@@ -23,7 +23,6 @@ object GeneExpressions extends App {
 
   val prefix = "/home/antonkulaga/data/" //path to gr file
 
-
   val gc = GeneCounter(sc)
   val fileName = "Drosophila_melanogaster.BDGP5.76.gtf" //gtf file to read
   gc.printFeatures(prefix + fileName, prefix + "output/" + "fly.txt") //writes gtf to a fly.txt file
