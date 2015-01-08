@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="SBT: org.seqdoop:htsjdk:1.118:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/htsjdk/jars/htsjdk-1.118.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/htsjdk/docs/htsjdk-1.118-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/htsjdk/srcs/htsjdk-1.118-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

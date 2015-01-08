@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="SBT: org.seqdoop:cofoja:1.1-r150:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/cofoja/jars/cofoja-1.1-r150.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/cofoja/docs/cofoja-1.1-r150-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/cofoja/srcs/cofoja-1.1-r150-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

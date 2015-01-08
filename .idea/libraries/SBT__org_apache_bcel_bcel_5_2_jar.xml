@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="SBT: org.apache.bcel:bcel:5.2:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.apache.bcel/bcel/jars/bcel-5.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

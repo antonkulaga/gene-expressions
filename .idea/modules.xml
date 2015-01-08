@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gene-expressions.iml" filepath="$PROJECT_DIR$/.idea/modules/gene-expressions.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/gene-expressions-build.iml" filepath="$PROJECT_DIR$/.idea/modules/gene-expressions-build.iml" />
+    </modules>
+  </component>
+</project>

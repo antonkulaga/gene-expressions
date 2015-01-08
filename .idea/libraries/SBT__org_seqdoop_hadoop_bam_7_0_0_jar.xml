@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="SBT: org.seqdoop:hadoop-bam:7.0.0:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/hadoop-bam/jars/hadoop-bam-7.0.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/hadoop-bam/docs/hadoop-bam-7.0.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.seqdoop/hadoop-bam/srcs/hadoop-bam-7.0.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
