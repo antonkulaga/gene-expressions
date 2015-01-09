@@ -3,8 +3,6 @@ import sbt._
 import bintray.Opts
 import bintray.Plugin.bintraySettings
 import bintray.Keys._
-import sbtassembly.{MergeStrategy, PathList, AssemblyKeys}
-import AssemblyKeys._
 
 class Build extends sbt.Build {
 

@@ -4,7 +4,9 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
 
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.3")
 
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.12.0")
+//addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.12.0")
+
+addSbtPlugin("org.scala-sbt.plugins" % "sbt-onejar" % "0.8")
 
 resolvers += Resolver.url("bintray-sbt-plugin-releases",url("http://dl.bintray.com/content/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
 
