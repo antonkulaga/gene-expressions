@@ -16,7 +16,7 @@ object GeneExpressions extends App {
 
   val conf: SparkConf = new SparkConf()
     .setMaster(master) //.setMaster("yarn-client")
-    .setJars(Seq("target/scala-2.10/gene-expressions_2.10-0.0.1.jar"))
+    .setJars(Seq("target/scala-2.10/gene-expressions.jar"))
     .setSparkHome(sparkHome)
     .setAppName("GeneExpressions")
   implicit val sc = new SparkContext(conf)

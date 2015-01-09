@@ -30,7 +30,7 @@ object Dependencies {
   import Library._
 
   val sparkHadoop = Seq(
-    sparkCore   exclude("org.apache.hadoop","hadoop-client"),
+    sparkCore.exclude("org.apache.hadoop","hadoop-client"),
     sparkStreaming,
     hadoopClient,
     scalaTest % "test"
@@ -42,7 +42,7 @@ object Dependencies {
   )
 
   val genetics = Seq(
-    adamCore exclude("org.apache.hadoop","hadoop-client"),
+    adamCore,
     bdFormats
     //guacamole
   )

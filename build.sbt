@@ -1,7 +1,7 @@
-//
-// http://spark.apache.org/docs/latest/quick-start.html#a-standalone-app-in-scala
-//
 name := """gene-expressions"""
+
+parallelExecution in Test := false
+
 
 // 2.11 doesn't seem to work
 scalaVersion := "2.10.4"
@@ -21,3 +21,23 @@ libraryDependencies ++= Dependencies.genetics
 releaseSettings
 
 scalariformSettings
+
+mainClass in assembly := Some("org.denigma.genes.GeneExpressions")
+
+assemblyJarName in assembly := "gene-expressions.jar"
+
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
+
+assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { (old) =>
+{
+  case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
+  case PathList("org", "apache", xs @ _*) => MergeStrategy.last
+  case PathList("com", "esotericsoftware", xs @ _*) => MergeStrategy.last
+  case "about.html" => MergeStrategy.rename
+  case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+  case x =>  MergeStrategy.last
+}  }
+
+assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+  cp filter {_.data.getName.contains("hadoop")}
+}
