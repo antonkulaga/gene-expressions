@@ -12,11 +12,11 @@ object GeneExpressions extends App {
 
   val sparkHome = "/home/antonkulaga/Soft/spark"
 
-  val master = "spark://antonkulaga:7077"
+  val master = System.getenv().getOrDefault("SPARK_MASTER","spark://antonkulaga:7077")
 
   val conf: SparkConf = new SparkConf()
     .setMaster(master) //.setMaster("yarn-client")
-    .setJars(Seq("target/scala-2.10/gene-expressions.jar"))
+    //.setJars(Seq("target/scala-2.10/gene-expressions.jar"))
     .setSparkHome(sparkHome)
     .setAppName("GeneExpressions")
   implicit val sc = new SparkContext(conf)
@@ -26,5 +26,6 @@ object GeneExpressions extends App {
   val gc = GeneCounter(sc)
   val fileName = "Drosophila_melanogaster.BDGP5.76.gtf" //gtf file to read
   gc.printFeatures(prefix + fileName, prefix + "output/" + "fly.txt") //writes gtf to a fly.txt file
+  println("SPARK JOB SUCCESSFULLY FINISHED")
   sc.stop
 }

@@ -18,10 +18,6 @@ libraryDependencies ++= Dependencies.other
 
 libraryDependencies ++= Dependencies.genetics
 
-releaseSettings
-
-scalariformSettings
-
 mainClass in assembly := Some("org.denigma.genes.GeneExpressions")
 
 assemblyJarName in assembly := "gene-expressions.jar"
@@ -30,8 +26,9 @@ assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeSca
 
 assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { (old) =>
 {
-  case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
-  case PathList("org", "apache", xs @ _*) => MergeStrategy.last
+  case m if m.toLowerCase.matches("meta-inf/.*\\.sf$") => MergeStrategy.discard
+  case PathList("javax", "servlet", xs @ _*) => MergeStrategy.first
+  case PathList("org", "apache", xs @ _*) => MergeStrategy.first
   case PathList("com", "esotericsoftware", xs @ _*) => MergeStrategy.last
   case "about.html" => MergeStrategy.rename
   case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard

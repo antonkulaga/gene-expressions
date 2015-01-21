@@ -6,7 +6,7 @@ import bintray.Keys._
 import sbtassembly.{MergeStrategy, PathList, AssemblyKeys}
 import AssemblyKeys._
 
-class Build extends sbt.Build {
+object Build extends sbt.Build {
 
   protected val bintrayPublishIvyStyle = settingKey[Boolean]("=== !publishMavenStyle") //workaround for sbt-bintray bug
 
@@ -19,6 +19,8 @@ class Build extends sbt.Build {
 
     bintrayPublishIvyStyle := true
   )
+
+
 
 
 
@@ -35,7 +37,6 @@ class Build extends sbt.Build {
 
   lazy val genesExpressions = Project(
     id = "gene-expressions",
-
     base = file(".")
   )
 }

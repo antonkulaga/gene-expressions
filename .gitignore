@@ -25,6 +25,7 @@ projectFilesBackup
 .target/
 
 # IntelliJ
+.idea
 .idea/
 *.iml
 *.ipr
