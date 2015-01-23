@@ -21,6 +21,6 @@ $ sbt
 
 $ assembly
 
-4) Run the project from sbt console:
-
-$ run
+4) Submit spark project using Spark Submit.
+For convenience I put small submit.sh bash script.
+In order to make it work make sure you have SPARK_HOME variable in your PATH

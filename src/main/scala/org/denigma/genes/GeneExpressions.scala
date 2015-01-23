@@ -21,14 +21,17 @@ object GeneExpressions extends App {
     .setAppName("GeneExpressions")
   implicit val sc = new SparkContext(conf)
 
-  val prefix = s"${home}/data/" //path to gr file
+  val prefix = s"$home/data/" //path to gr file
   val adam = s"$prefix/adam"
+  val sample = prefix + "samples/"
   val output = s"$prefix/output"
 
   val gc = GeneCounter(sc)
   val gtf = "Drosophila_melanogaster.BDGP5.76.gtf" //gtf file to read
   //gc.countReads(s"$adam/3",s"$output/adam.txt")
-  gc.printFeatures(prefix + gtf, s"$output/test.txt") //writes gtf to a fly.txt file
-  println("SPARK JOB SUCCESSFULLY FINISHED")
-  sc.stop
+  //gc.saveGenes(prefix + gtf, s"$output/genes.txt") //writes gtf to a fly.txt file
+  //gc.convertFeatures(prefix + gtf, s"$output/fly.adam")
+  gc.compareTranscripts(s"${sample}3.gtf",s"${sample}4.gtf",s"${sample}9.gtf")(s"$output/utrs.txt")
+  println("GENE EXPRESSIONS SPARK JOB SUCCESSFULLY FINISHED")
+  sc.stop()
 }
