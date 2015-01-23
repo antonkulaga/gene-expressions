@@ -14,7 +14,7 @@ resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repos
 
 libraryDependencies ++= Dependencies.sparkHadoop
 
-libraryDependencies ++= Dependencies.other
+//libraryDependencies ++= Dependencies.other
 
 libraryDependencies ++= Dependencies.genetics
 

@@ -10,8 +10,8 @@ import org.apache.spark.{ Partition, SparkConf, SparkContext }
  */
 object GeneExpressions extends App {
 
-  val sparkHome = "/home/antonkulaga/Soft/spark"
-
+  val home = System.getenv().getOrDefault("HOME","/home/antonkulaga")
+  val sparkHome = System.getenv().getOrDefault("SPARK_HOME",s"$home/Soft/spark")
   val master = System.getenv().getOrDefault("SPARK_MASTER","spark://antonkulaga:7077")
 
   val conf: SparkConf = new SparkConf()
@@ -21,11 +21,14 @@ object GeneExpressions extends App {
     .setAppName("GeneExpressions")
   implicit val sc = new SparkContext(conf)
 
-  val prefix = "/home/antonkulaga/data/" //path to gr file
+  val prefix = s"${home}/data/" //path to gr file
+  val adam = s"$prefix/adam"
+  val output = s"$prefix/output"
 
   val gc = GeneCounter(sc)
-  val fileName = "Drosophila_melanogaster.BDGP5.76.gtf" //gtf file to read
-  gc.printFeatures(prefix + fileName, prefix + "output/" + "fly.txt") //writes gtf to a fly.txt file
+  val gtf = "Drosophila_melanogaster.BDGP5.76.gtf" //gtf file to read
+  //gc.countReads(s"$adam/3",s"$output/adam.txt")
+  gc.printFeatures(prefix + gtf, s"$output/test.txt") //writes gtf to a fly.txt file
   println("SPARK JOB SUCCESSFULLY FINISHED")
   sc.stop
 }

@@ -7,15 +7,15 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.rdd.features.GeneFeatureRDD._
 import org.bdgenomics.adam.rdd.features.FeaturesContext._
-import org.bdgenomics.formats.avro.Feature
+import org.bdgenomics.formats.avro.{AlignmentRecord, Feature}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.core
 import org.bdgenomics.adam.rdd.ADAMContext
-import org.bdgenomics.formats.avro.Feature
 
-case class GeneCounter(sc: SparkContext) {
+case class GeneCounter(@transient sc: SparkContext) {
 
+  @transient
   lazy val ac = new ADAMContext(sc)
 
   /**
@@ -47,9 +47,5 @@ case class GeneCounter(sc: SparkContext) {
       w.write(l)
     }
     w.close()
-  }
-
-  def compute() = {
-
   }
 }
