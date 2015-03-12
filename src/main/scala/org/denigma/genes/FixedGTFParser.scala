@@ -1,13 +1,16 @@
-package org.denigma.genes.parsers
+package org.denigma.genes
 
 
-import java.io.File
-import java.util.UUID
-import org.bdgenomics.formats.avro._
-import org.bdgenomics.formats.avro.{Contig, Strand, Feature}
-import scala.collection.JavaConversions._
-import scala.collection.mutable.ArrayBuffer
-import org.bdgenomics.adam.rdd.features._
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import org.apache.spark.rdd.RDD
+import org.bdgenomics.adam.models.{Exon, UTR}
+import org.bdgenomics.adam.projections.{AlignmentRecordField, Projection}
+import org.bdgenomics.adam.rdd.ADAMContext
+import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.features.{GTFParser, FeatureParser}
+import org.bdgenomics.adam.rich.ReferenceMappingContext.FeatureReferenceMapping
+import org.bdgenomics.formats.avro.{Contig, AlignmentRecord, Feature, Strand}
 
 /**
  * GTF is a line-based GFF variant.
@@ -45,12 +48,16 @@ class FixedGTFParser extends FeatureParser {
       case _   => Strand.Independent
     }
     f.setStrand(_strand)
-
+    
+    val exonId: Option[String] = attrs.get("exon_id").orElse{
+      attrs.get("transcript_id").flatMap(t=>attrs.get("exon_number").map(e=>t+"_"+e))
+      
+    }
     val (_id, _parentId) =
       feature match {
         case "gene"       => (attrs.get("gene_id"), None)
         case "transcript" => (attrs.get("transcript_id"), attrs.get("gene_id"))
-        case "exon"       => (attrs.get("exon_id"), attrs.get("transcript_id"))
+        case "exon"       => (exonId, attrs.get("transcript_id"))
         case "CDS"        => (attrs.get("id"), attrs.get("transcript_id"))
         case "UTR"        => (attrs.get("id"), attrs.get("transcript_id"))
         case _            => (attrs.get("id"), None)

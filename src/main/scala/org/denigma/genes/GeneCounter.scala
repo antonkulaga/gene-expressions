@@ -3,82 +3,92 @@ package org.denigma.genes
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.{Exon, Gene, UTR}
+import org.bdgenomics.adam.models.{Transcript, CDS, Exon, UTR}
+import org.bdgenomics.adam.projections.{AlignmentRecordField, Projection}
 import org.bdgenomics.adam.rdd.ADAMContext
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.rdd.features.FeaturesContext._
-import org.bdgenomics.adam.rdd.features.GeneFeatureRDD
-import org.bdgenomics.adam.rdd.features.GeneFeatureRDD._
 import org.bdgenomics.adam.rich.ReferenceMappingContext.FeatureReferenceMapping
-import org.bdgenomics.formats.avro.Feature
-import org.denigma.genes.parsers.FixedGTFParser
+import org.bdgenomics.formats.avro.{AlignmentRecord, Feature, Strand}
+
 
 case class GeneCounter(@transient sc: SparkContext) {
 
+  def strand(str: Strand): Boolean = str match {
+    case Strand.Forward     => true
+    case Strand.Reverse     => false
+    case Strand.Independent => true
+  }
+
+
   @transient
   lazy val ac = new ADAMContext(sc)
-
-  /**
-   * Just a test method that reads gtf and prints something to a file
-   * @param from
-   * @param to
-   */
-  def saveGenes(from: String, to: String) = {
-    val features: RDD[Feature] = sc.adamGTFFeatureLoad(from)
-    val genes = features.asGenes()
-    val info= genes.map{
-      case g=>
-        s"-----------------\n"+
-        s"GENE ${g.id} called ${g.names.mkString}\n"
-        s"with transcripts: "+g.transcripts.foldLeft(""){
-          case (acc,el)=> acc+s"id = ${el.id} with UTRS ${el.utrs.mkString}}"+"\n"
-        }
-    }
-    info.coalesce(1,shuffle = true).saveAsTextFile(to)
-    println("FEATURES SAVED SUCCESSFULLY")
-  }
-
-  /**
-   * converts features to ADAM format
-   * @param from
-   * @param to
-   */
-  def convertFeatures(from:String,to:String) = {
-    // get file extension
-    // regex: anything . (extension) EOL
-    val extensionPattern = """.*[.]([^.]*)$""".r
-    val extensionPattern(extension) = from
-    val features: RDD[Feature] = extension.toLowerCase match {
-      case "gff"        => sc.adamGTFFeatureLoad(from)
-      case "gtf"        => sc.adamGTFFeatureLoad(from)
-      case "bed"        => sc.adamBEDFeatureLoad(from)
-      case "narrowPeak" => sc.adamNarrowPeakFeatureLoad(from)
-    }
-    features.coalesce(1,true).adamParquetSave(to)
-  }
-
-  def convertBam(from:String,to:String) = {
-
-  }
-
-  def parseGTF(filePath:String): RDD[Feature] = {
+  
+  def loadGTFFeatures(filePath:String) = {
     sc.textFile(filePath).flatMap(new FixedGTFParser().parse)
+    
+  }
+  
+  def loadFeatures(input:String,name:String):RDD[(String,Feature)]= {
+    val filePath = input + name
+    val features: RDD[Feature] = this.loadGTFFeatures(filePath)
+    featuresByKey(features).cache()
   }
 
-  def openAdam(from:String) = {
-    //sc.adamLoad()
+
+  def loadGenes(input:String,name:String)= {
+    val byKey = this.loadFeatures(input,name)
+    val exons = this.exonsByTranscript(byKey)
+    val utrs = this.utrsByTranscript(byKey)
+    exons.take(100).foreach{
+      e=>println(s"EXON = "+e._2+s" of TRANSCRIPT ${e._1} \n")
+    }
+    val cds: RDD[(String, Iterable[CDS])] = this.cdsByTranscript(byKey)
+    transcriptsByGenes(byKey,exons,utrs,cds)
   }
 
 
+
+  /**
+   * Projection to extract only properties we need* 
+   */
+  lazy val projection =Projection(
+    AlignmentRecordField.readMapped,
+    AlignmentRecordField.contig,
+    AlignmentRecordField.primaryAlignment,
+    AlignmentRecordField.readMapped,
+    AlignmentRecordField.start,
+    AlignmentRecordField.end,
+    AlignmentRecordField.mapq,
+    AlignmentRecordField.sequence,
+    AlignmentRecordField.cigar
+  )
+  
+  def loadGeneMap(names:String*)(implicit path:String): Map[String, RDD[AlignmentRecord]] = {
+    val files = names.map(n=>path+n)
+    files.map(f=>f->ac.loadAlignments(f,projection =Some(projection))).toMap
+  }
+  
   protected def featuresByKey(features:RDD[Feature]): RDD[(String, Feature)] = {  features.keyBy(_.getFeatureType).cache()  }
 
-  protected def utrsByTranscript(typePartitioned:RDD[(String, Feature)] ): RDD[(String, Iterable[UTR])] = {
-    typePartitioned.filter(_._1 == "UTR").flatMap {
-      case ("UTR", ftr: Feature) =>
-        val ids: Seq[String] = ftr.getParentIds
-        ids.map(transcriptId => (transcriptId,
-          UTR(transcriptId, GeneFeatureRDD.strand(ftr.getStrand), FeatureReferenceMapping.getReferenceRegion(ftr))))
-    }.groupByKey()
+  
+  protected def cdsByTranscript(typePartitioned:RDD[(String, Feature)] ): RDD[(String, Iterable[CDS])] = {
+    
+      typePartitioned.filter(_._1 == "CDS").flatMap {
+        case ("CDS", ftr: Feature) =>
+          val ids: Seq[String] = ftr.getParentIds.map(_.toString)
+          ids.map(transcriptId => (transcriptId,
+            CDS(transcriptId, strand(ftr.getStrand), FeatureReferenceMapping.getReferenceRegion(ftr))))
+      }.groupByKey()
+  }
+  
+  protected def utrsByTranscript(typePartitioned:RDD[(String, Feature)]): RDD[(String, Iterable[UTR])] = {
+      typePartitioned.filter(_._1 == "UTR").flatMap {
+        case ("UTR", ftr: Feature) =>
+          val ids: Seq[String] = ftr.getParentIds.map(_.toString)
+          ids.map(transcriptId => (transcriptId,
+            UTR(transcriptId, strand(ftr.getStrand), FeatureReferenceMapping.getReferenceRegion(ftr))))
+      }.groupByKey()
+    
   }
 
   protected def exonsByTranscript(typePartitioned:RDD[(String, Feature)] ): RDD[(String, Iterable[Exon])] = {
@@ -88,28 +98,71 @@ case class GeneCounter(@transient sc: SparkContext) {
       case ("exon", ftr: Feature) =>
         val ids: Seq[String] = ftr.getParentIds
         ids.map(transcriptId => (transcriptId,
-          Exon(ftr.getFeatureId, transcriptId, GeneFeatureRDD.strand(ftr.getStrand), FeatureReferenceMapping.getReferenceRegion(ftr))))
+          Exon(ftr.getFeatureId, transcriptId, strand(ftr.getStrand), FeatureReferenceMapping.getReferenceRegion(ftr))))
     }.groupByKey()
   }
 
+  def transcriptsByGenes(typePartitioned:RDD[Feature] )= {
+    /*typePartitioned.filter(tp=>tp._1 == "exon").flatMap {
+      // There really only should be _one_ parent listed in this flatMap, but since
+      // getParentIds is modeled as returning a List[], we'll write it this way.
+      case ("exon", ftr: Feature) =>
+        val ids: Seq[String] = ftr.getParentIds
+
+        ids.map(transcriptId => ( (ftr.getAttributes.get("gene_id"),transcriptId),
+          Exon(ftr.getFeatureId, transcriptId, strand(ftr.getStrand), FeatureReferenceMapping.getReferenceRegion(ftr))))
+    }.groupByKey()*/
+    ???
+  }
+
+  def transcriptsByGenes(typePartitioned:RDD[(String,Feature)],
+                         exonsByTranscript:RDD[(String, Iterable[Exon])],
+                         utrsByTranscript:RDD[(String, Iterable[UTR])],
+                           cdsByTranscript: RDD[(String, Iterable[CDS])] ) = {
+    // Step #3
+
+    typePartitioned.filter(_._1 == "transcript").map {
+      case ("transcript", ftr: Feature) => (ftr.getFeatureId.toString, ftr)
+    }.join(exonsByTranscript)
+      .leftOuterJoin(utrsByTranscript)
+      .leftOuterJoin(cdsByTranscript)
+
+      .flatMap {
+      // There really only should be _one_ parent listed in this flatMap, but since
+      // getParentIds is modeled as returning a List[], we'll write it this way.
+      case (transcriptId: String, (((tgtf: Feature, exons: Iterable[Exon]),
+      utrs: Option[Iterable[UTR]]),
+      cds: Option[Iterable[CDS]])) =>
+        val geneIds: Seq[String] = tgtf.getParentIds.map(_.toString) // should be length 1
+        geneIds.map(f = geneId => (geneId,
+          Transcript(transcriptId, Seq(transcriptId), geneId,
+            strand(tgtf.getStrand),
+            exons, cds.getOrElse(Seq()), utrs.getOrElse(Seq()))))
+    }.groupByKey()
+
+
+  }
+
+  /*  
+  
+    def compareTranscripts(from:String*) = {
+      val samples: Seq[(String, RDD[Feature])] = from.map(f=>f->this.parseGTF(f))
+      val typedSamples: Seq[(String, RDD[(String, Feature)])] = samples.map{case(s,features)=>s->features.keyBy(_.getFeatureType).cache() }
+  
+    }
+  
+    def compareExons(from:String*)(to:String) = {
+      val samples: Seq[(String, RDD[Feature])] = from.map(f=>f->this.parseGTF(f))
+      val typedSamples: Seq[(String, RDD[(String, Feature)])] = samples.map{case(s,features)=>s->features.keyBy(_.getFeatureType).cache() }
+      //val exonsSamples = typedSamples.map{ case(s,fs)=>s->exonsByTranscript(fs) }
+      val exonsSamples = typedSamples.map{ case(s,fs)=>exonsByTranscript(fs) }
+      sc.union(exonsSamples).saveAsTextFile(to)
+    }*/
 
   protected def regionInfo(utr:UTR)=  s"from ${utr.region.start} to ${utr.region.end} of ${utr.region.length()}"
 
 
-  def compareTranscripts(from:String*) = {
-    val samples: Seq[(String, RDD[Feature])] = from.map(f=>f->this.parseGTF(f))
-    val typedSamples: Seq[(String, RDD[(String, Feature)])] = samples.map{case(s,features)=>s->features.keyBy(_.getFeatureType).cache() }
-
-  }
-
-  def compareExons(from:String*)(to:String) = {
-    val samples: Seq[(String, RDD[Feature])] = from.map(f=>f->this.parseGTF(f))
-    val typedSamples: Seq[(String, RDD[(String, Feature)])] = samples.map{case(s,features)=>s->features.keyBy(_.getFeatureType).cache() }
-    //val exonsSamples = typedSamples.map{ case(s,fs)=>s->exonsByTranscript(fs) }
-    val exonsSamples = typedSamples.map{ case(s,fs)=>exonsByTranscript(fs) }
-    sc.union(exonsSamples).saveAsTextFile(to)
-  }
-
+/*
   /**
    * Compares UTRs
    * @param from
@@ -132,9 +185,9 @@ case class GeneCounter(@transient sc: SparkContext) {
     val comparison: RDD[String] = info.groupByKey().map{
       case (key,strs)=>s"----------------------\nTRANSCRIPT $key"+strs.reduce(_+_)
    }
-    comparison.coalesce(1,true).saveAsTextFile(to)*/
+    comparison.coalesce(1,true).saveAsTextFile(to)
     println("GTF FILES: \n"+from.reduce((a,b)=>a+"\n"+b)+"\nwere processed")
 
   }
-
+*/
 }

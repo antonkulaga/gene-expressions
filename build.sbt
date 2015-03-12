@@ -12,9 +12,11 @@ resolvers += "bintray/non" at "http://dl.bintray.com/non/maven"
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-libraryDependencies ++= Dependencies.sparkHadoop
+resolvers += "Pellucid Bintray" at "http://dl.bintray.com/pellucid/maven"
 
-//libraryDependencies ++= Dependencies.other
+libraryDependencies ++= Dependencies.common
+
+libraryDependencies ++= Dependencies.sparkHadoop
 
 libraryDependencies ++= Dependencies.genetics
 

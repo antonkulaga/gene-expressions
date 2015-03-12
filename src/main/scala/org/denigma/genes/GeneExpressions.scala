@@ -4,6 +4,9 @@ import org.apache.spark.{ SparkConf, SparkContext }
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{ Partition, SparkConf, SparkContext }
+import org.bdgenomics.adam.models.Transcript
+import org.bdgenomics.adam.rdd.ADAMContext
+import org.bdgenomics.formats.avro.Feature
 
 /**
  * Just  a test app to learn ADAM
@@ -17,21 +20,42 @@ object GeneExpressions extends App {
   val conf: SparkConf = new SparkConf()
     .setMaster(master) //.setMaster("yarn-client")
     //.setJars(Seq("target/scala-2.10/gene-expressions.jar"))
+    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    .set("spark.kryo.registrator", "org.bdgenomics.adam.serialization.ADAMKryoRegistrator")
+    .set("spark.kryoserializer.buffer.mb", "4")
+    .set("spark.kryo.referenceTracking", "true")
+    .set("spark.executor.memory", "6g")
     .setSparkHome(sparkHome)
     .setAppName("GeneExpressions")
   implicit val sc = new SparkContext(conf)
-
-  val prefix = s"$home/data/" //path to gr file
-  val adam = s"$prefix/adam"
-  val sample = prefix + "samples/"
-  val output = s"$prefix/output"
-
+  val ns = new NamesExtractor(sc)
+  //ns.saveNames()
+  ns.transformNames()
+  sc.stop()
+  
+/*
+  val localPrefix = s"$home/data/" //path to gr file
+  val samples = localPrefix + "samples/"
+  val hdfs = "hdfs://localhost/user/antonkulaga/data/"
   val gc = GeneCounter(sc)
-  val gtf = "Drosophila_melanogaster.BDGP5.76.gtf" //gtf file to read
-  //gc.countReads(s"$adam/3",s"$output/adam.txt")
-  //gc.saveGenes(prefix + gtf, s"$output/genes.txt") //writes gtf to a fly.txt file
-  //gc.convertFeatures(prefix + gtf, s"$output/fly.adam")
-  gc.compareTranscripts(s"${sample}3.gtf",s"${sample}4.gtf",s"${sample}9.gtf")(s"$output/utrs.txt")
-  println("GENE EXPRESSIONS SPARK JOB SUCCESSFULLY FINISHED")
+  val gtfName = "merged.gtf"
+  val features  = gc.loadFeatures(samples,gtfName)
+  features.collect{  case ("transcript",feature)=>feature}
+  
+/*  val genes = gc.loadGenes(samples,gtfName)
+  val gs: Array[(String, Iterable[Transcript])] = genes.takeSample(false,100)
+  for{
+    (id,ts) <- gs
+    t <-ts
+  } {
+    println(s"GENE $id with transcript $t \n")
+    
+  }*/
+  println("GENE EXPRESSIONS SUCCESSFULY FINISHED")
+  //gc.loadGenes("3.adam","4.adam","9.adam")(hdfs)*/
+
+  
+
+  
   sc.stop()
 }

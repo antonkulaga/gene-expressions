@@ -11,7 +11,7 @@ To run this app:
 
 1) Configure input and output path as well as gtf file name:
 
-2) Start spark 1.20 (build for Hadoop 2.4) in a standalone mode:
+2) Start spark 1.2.1 (build for Hadoop 2.4) in a standalone mode:
 
 3) Open an sbt console:
 
