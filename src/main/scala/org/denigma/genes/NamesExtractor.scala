@@ -8,6 +8,7 @@ import scala.collection.Map
 import scala.io.Source
 import scala.reflect.io.File
 import org.apache.spark.SparkContext._ //some useful implicits
+import org.bdgenomics.adam.models._
 
 case class NamesExtractor(@transient sc: SparkContext)  {
   @transient

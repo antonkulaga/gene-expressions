@@ -1,31 +1,30 @@
 package org.denigma.genes
 
+import org.apache.avro.Schema
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.models.{Transcript, CDS, Exon, UTR}
+import org.bdgenomics.adam.predicates.HighQualityReadPredicate
 import org.bdgenomics.adam.projections.{AlignmentRecordField, Projection}
 import org.bdgenomics.adam.rdd.ADAMContext
 import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.read.comparisons.ComparisonTraversalEngine
 import org.bdgenomics.adam.rich.ReferenceMappingContext.FeatureReferenceMapping
 import org.bdgenomics.formats.avro.{AlignmentRecord, Feature, Strand}
+import ADAMContext._
 
 
-case class GeneCounter(@transient sc: SparkContext) {
+case class GeneCounter(@transient sc: SparkContext) extends ExpressionsBase{
 
-  def strand(str: Strand): Boolean = str match {
-    case Strand.Forward     => true
-    case Strand.Reverse     => false
-    case Strand.Independent => true
-  }
 
 
   @transient
   lazy val ac = new ADAMContext(sc)
+
   
   def loadGTFFeatures(filePath:String) = {
     sc.textFile(filePath).flatMap(new FixedGTFParser().parse)
-    
   }
   
   def loadFeatures(input:String,name:String):RDD[(String,Feature)]= {
@@ -46,33 +45,19 @@ case class GeneCounter(@transient sc: SparkContext) {
     transcriptsByGenes(byKey,exons,utrs,cds)
   }
 
-
-
-  /**
-   * Projection to extract only properties we need* 
-   */
-  lazy val projection =Projection(
-    AlignmentRecordField.readMapped,
-    AlignmentRecordField.contig,
-    AlignmentRecordField.primaryAlignment,
-    AlignmentRecordField.readMapped,
-    AlignmentRecordField.start,
-    AlignmentRecordField.end,
-    AlignmentRecordField.mapq,
-    AlignmentRecordField.sequence,
-    AlignmentRecordField.cigar
-  )
   
   def loadGeneMap(names:String*)(implicit path:String): Map[String, RDD[AlignmentRecord]] = {
     val files = names.map(n=>path+n)
-    files.map(f=>f->ac.loadAlignments(f,projection =Some(projection))).toMap
+    val pred = new HighQualityReadPredicate
+    files.map(f=>f->ac.loadAlignments(f,predicate = Some(classOf[HighQualityReadPredicate]),projection =Some(projection))).toMap
   }
-  
-  protected def featuresByKey(features:RDD[Feature]): RDD[(String, Feature)] = {  features.keyBy(_.getFeatureType).cache()  }
+
+
+  def featuresByKey(features:RDD[Feature]): RDD[(String, Feature)] = {  features.keyBy(_.getFeatureType).cache()  }
 
   
-  protected def cdsByTranscript(typePartitioned:RDD[(String, Feature)] ): RDD[(String, Iterable[CDS])] = {
-    
+  def cdsByTranscript(typePartitioned:RDD[(String, Feature)] ): RDD[(String, Iterable[CDS])] = {
+
       typePartitioned.filter(_._1 == "CDS").flatMap {
         case ("CDS", ftr: Feature) =>
           val ids: Seq[String] = ftr.getParentIds.map(_.toString)
@@ -81,7 +66,7 @@ case class GeneCounter(@transient sc: SparkContext) {
       }.groupByKey()
   }
   
-  protected def utrsByTranscript(typePartitioned:RDD[(String, Feature)]): RDD[(String, Iterable[UTR])] = {
+  def utrsByTranscript(typePartitioned:RDD[(String, Feature)]): RDD[(String, Iterable[UTR])] = {
       typePartitioned.filter(_._1 == "UTR").flatMap {
         case ("UTR", ftr: Feature) =>
           val ids: Seq[String] = ftr.getParentIds.map(_.toString)
@@ -91,10 +76,8 @@ case class GeneCounter(@transient sc: SparkContext) {
     
   }
 
-  protected def exonsByTranscript(typePartitioned:RDD[(String, Feature)] ): RDD[(String, Iterable[Exon])] = {
+  def exonsByTranscript(typePartitioned:RDD[(String, Feature)] ): RDD[(String, Iterable[Exon])] = {
     typePartitioned.filter(_._1 == "exon").flatMap {
-      // There really only should be _one_ parent listed in this flatMap, but since
-      // getParentIds is modeled as returning a List[], we'll write it this way.
       case ("exon", ftr: Feature) =>
         val ids: Seq[String] = ftr.getParentIds
         ids.map(transcriptId => (transcriptId,
@@ -102,31 +85,15 @@ case class GeneCounter(@transient sc: SparkContext) {
     }.groupByKey()
   }
 
-  def transcriptsByGenes(typePartitioned:RDD[Feature] )= {
-    /*typePartitioned.filter(tp=>tp._1 == "exon").flatMap {
-      // There really only should be _one_ parent listed in this flatMap, but since
-      // getParentIds is modeled as returning a List[], we'll write it this way.
-      case ("exon", ftr: Feature) =>
-        val ids: Seq[String] = ftr.getParentIds
-
-        ids.map(transcriptId => ( (ftr.getAttributes.get("gene_id"),transcriptId),
-          Exon(ftr.getFeatureId, transcriptId, strand(ftr.getStrand), FeatureReferenceMapping.getReferenceRegion(ftr))))
-    }.groupByKey()*/
-    ???
-  }
-
   def transcriptsByGenes(typePartitioned:RDD[(String,Feature)],
                          exonsByTranscript:RDD[(String, Iterable[Exon])],
                          utrsByTranscript:RDD[(String, Iterable[UTR])],
                            cdsByTranscript: RDD[(String, Iterable[CDS])] ) = {
-    // Step #3
-
     typePartitioned.filter(_._1 == "transcript").map {
       case ("transcript", ftr: Feature) => (ftr.getFeatureId.toString, ftr)
     }.join(exonsByTranscript)
       .leftOuterJoin(utrsByTranscript)
       .leftOuterJoin(cdsByTranscript)
-
       .flatMap {
       // There really only should be _one_ parent listed in this flatMap, but since
       // getParentIds is modeled as returning a List[], we'll write it this way.
@@ -139,8 +106,6 @@ case class GeneCounter(@transient sc: SparkContext) {
             strand(tgtf.getStrand),
             exons, cds.getOrElse(Seq()), utrs.getOrElse(Seq()))))
     }.groupByKey()
-
-
   }
 
   /*  
